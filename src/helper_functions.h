@@ -14,10 +14,24 @@
 #include <vector>
 #include "map.h"
 
+#include <iostream>
+using namespace std;
+
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
 const double M_PI = 3.14159265358979323846;
 #endif
+
+
+/*
+ * Computes the Euclidean distance between two 2D points.
+ * @param (x1,y1) x and y coordinates of first point
+ * @param (x2,y2) x and y coordinates of second point
+ * @output Euclidean distance between two 2D points
+ */
+inline double dist(double x1, double y1, double x2, double y2) {
+	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
 
 /*
  * Struct representing one position/control measurement.
@@ -46,17 +60,81 @@ struct LandmarkObs {
 	int id;				// Id of matching landmark in the map.
 	double x;			// Local (vehicle coordinates) x position of landmark observation [m]
 	double y;			// Local (vehicle coordinates) y position of landmark observation [m]
+
+	/**
+	 * Returns a new LandmarkObs struct with respect to a point with orientation theta 
+	 * from a different perspective (but still in a cartesian system) 
+	 * by applying a homogenous transformation. Essentially a rotation and translation
+	 * are applied to find our new coordinates. 
+	 * @param xp the x coordinate of our reference point
+	 * @param yp the y coordinate of our reference point
+	 * @param theta the rotation angle
+	 * 
+	*/ 
+	LandmarkObs to_map_coordinates(double xp, double yp, double theta){		
+		double new_x = xp + cos(theta * x) - sin(theta * y);
+		double new_y = yp + sin(theta * x) + cos(theta * y);
+
+		LandmarkObs l = LandmarkObs();
+		l.id = id;
+		l.x = new_x;
+		l.y = new_y;		
+
+		return l;	
+	}
+
+
+	/**
+	 * Computes the distances between two landmark observations
+	 * @param obs the other landmark observation
+	 */ 
+	double distance(const LandmarkObs &obs){
+		return dist(x, y, obs.x, obs.y);	
+	}
 };
 
-/*
- * Computes the Euclidean distance between two 2D points.
- * @param (x1,y1) x and y coordinates of first point
- * @param (x2,y2) x and y coordinates of second point
- * @output Euclidean distance between two 2D points
- */
-inline double dist(double x1, double y1, double x2, double y2) {
-	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+/**
+ * Populates map coordinates landmark from the car coordinate landmark 
+ * with respect to a point with orientation theta 
+ * from a different perspective (but still in a cartesian system) 
+ * by applying a homogenous transformation. Essentially a rotation and translation
+ * are applied to find our new coordinates. 
+ * @param car_coord_landmark in car coordinates
+ * @param map_coord_landmark the landmark in map coordinates that will be populated
+ * @param xp the x coordinate of our reference point
+ * @param yp the y coordinate of our reference point
+ * @param theta the rotation angle
+ * 
+*/ 
+// inline void to_map_coordinates(const LandmarkObs &car_coord_landmark, 
+// 	LandmarkObs &map_coord_landmark, double xp, double yp, double theta){
+
+// 	double x = car_coord_landmark.x;
+// 	double y = car_coord_landmark.y;
+// 	double new_x = xp + cos(theta * x) - sin(theta * y);
+// 	double new_y = yp + sin(theta * x) + cos(theta * y);
+
+// 	map_coord_landmark.id = car_coord_landmark.id;
+// 	map_coord_landmark.x = new_x;
+// 	map_coord_landmark.y = new_y;
+
+// 	return;
+// }
+
+/**
+ * Computes P(x,y). which represents the 2-argument version
+ * of gaussian distribution.
+ * 
+ */ 
+inline double multivariate_gaussian(double x, double y, double ux, double uy, double std_x, double std_y){
+	double left_term = 1.0 / (2 * M_PI * std_x * std_y);
+	double x_term = pow((x - ux), 2.0) / (2.0 * pow(std_x, 2.0));
+	double y_term = pow((y - uy), 2.0) / (2.0 * pow(std_y, 2.0));
+	double exp_term = -1 * (x_term + y_term);
+	
+	return left_term * exp(exp_term);
 }
+
 
 inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y, double pf_theta) {
 	static double error[3];

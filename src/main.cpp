@@ -64,26 +64,22 @@ int main()
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
-
-          if (!pf.initialized()) {
+          if (!pf.initialized()){
 
           	// Sense noisy position data from the simulator
-			double sense_x = std::stod(j[1]["sense_x"].get<std::string>());
-			double sense_y = std::stod(j[1]["sense_y"].get<std::string>());
-			double sense_theta = std::stod(j[1]["sense_theta"].get<std::string>());
+            double sense_x = std::stod(j[1]["sense_x"].get<std::string>());
+            double sense_y = std::stod(j[1]["sense_y"].get<std::string>());
+            double sense_theta = std::stod(j[1]["sense_theta"].get<std::string>());
+            pf.init(sense_x, sense_y, sense_theta, sigma_pos);
+          }else {
+            // Predict the vehicle's next state from previous (noiseless control) data.
+            double previous_velocity = std::stod(j[1]["previous_velocity"].get<std::string>());
+            double previous_yawrate = std::stod(j[1]["previous_yawrate"].get<std::string>());
+			      pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
+		      }
 
-			pf.init(sense_x, sense_y, sense_theta, sigma_pos);
-		  }
-		  else {
-			// Predict the vehicle's next state from previous (noiseless control) data.
-		  	double previous_velocity = std::stod(j[1]["previous_velocity"].get<std::string>());
-			double previous_yawrate = std::stod(j[1]["previous_yawrate"].get<std::string>());
-
-			pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
-		  }
-
-		  // receive noisy observation data from the simulator
-		  // sense_observations in JSON format [{obs_x,obs_y},{obs_x,obs_y},...{obs_x,obs_y}]
+        // receive noisy observation data from the simulator
+        // sense_observations in JSON format [{obs_x,obs_y},{obs_x,obs_y},...{obs_x,obs_y}]
 		  	vector<LandmarkObs> noisy_observations;
 		  	string sense_observations_x = j[1]["sense_observations_x"];
 		  	string sense_observations_y = j[1]["sense_observations_y"];

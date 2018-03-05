@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	
-	num_particles = 10;
+	num_particles = 50;
 	particles.resize(num_particles);
 	weights.resize(num_particles);
 
@@ -51,6 +51,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		p.weight = initial_weight;	
 
 		weights[i]	= initial_weight;
+		particles[i] = p;
 	}	
 	is_initialized = true;	
 }
@@ -65,6 +66,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	double std_theta = std_pos[2];
 
 	default_random_engine gen;
+	// cout << "YAW RATE=" << yaw_rate << endl;
 
 	for(unsigned int i = 0; i < particles.size(); ++i){
 		Particle p = particles[i];
@@ -72,10 +74,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		double new_y;
 		double new_theta;
 		if(fabs(yaw_rate) <= 0.00001){
-			new_x = p.x + (velocity * delta_t) * cos(yaw_rate);
-			new_y = p.y + (velocity * delta_t) * sin(yaw_rate);
-			new_theta = yaw_rate;
-
+			new_x = p.x + (velocity * delta_t) * cos(p.theta);
+			new_y = p.y + (velocity * delta_t) * sin(p.theta);
+			new_theta = p.theta;
 		}else{
 			double theta_dt = yaw_rate * delta_t;
 			new_theta = p.theta + theta_dt;
@@ -84,6 +85,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 			new_y = p.y + v_over_yaw * (cos(p.theta) - cos(new_theta));
 		}
 
+		// Make sure we sample the new value from the distributions below
 		normal_distribution<double> dist_x(new_x, std_x);
 		normal_distribution<double> dist_y(new_y, std_y);
 		normal_distribution<double> dist_theta(new_theta, std_theta);
@@ -94,8 +96,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 		// Re-assign to the particles vector as structs are obtained by copy
 		particles[i] = p;
-
-		// cout << "Particle prediction [x=" <<  p.x << ", y=" << p.y << ", theta=" << p.theta << "]" << endl;
 	}
 
 	
@@ -141,19 +141,22 @@ void ParticleFilter::dataAssociation(Particle &p, double std_landmark[], std::ve
 			}
 		}
 
-		cout << "Found closest landmark [p-id=" << p.id <<", id=" << closest_landark.id << ", dist=" << min_distance << "]" << endl;
-		cout << "pred coord (" << pred.x << "," << pred.y << ") - l coord (" << closest_landark.x << ", " << closest_landark.y << ")" << endl;
+		// cout << "Found closest landmark [p-id=" << p.id <<", id=" << closest_landark.id << ", dist=" << min_distance << "]" << endl;
+		// cout << "pred coord (" << pred.x << "," << pred.y << ") - l coord (" << closest_landark.x << ", " << closest_landark.y << ")" << endl;
 
 		associations[i] = closest_landark.id;
 		sense_x[i] = pred.x;
 		sense_y[i] = pred.y;		
+		// sense_x[i] = closest_landark.x;
+		// sense_y[i] = closest_landark.y;		
 
 		double w = multivariate_gaussian(pred.x, pred.y, 
 			closest_landark.x, closest_landark.y, std_x, std_y);
 		
-		cout << "Computed multivariate gaussian [p-id=" << p.id << ", v=" << w  << "]" << endl;
+		// cout << "Computed multivariate gaussian [p-id=" << p.id << ", v=" << w  << "]" << endl;
 		p.weight *= w;		
 	}
+	// cout << "Total weight for particle " << p.id << " = " << p.weight << endl;
 
 	// cout << "[dataAssociation] AFTER LOOP" << endl;
 	SetAssociations(p, associations, sense_x, sense_y);
@@ -221,6 +224,12 @@ void ParticleFilter::resample() {
 		w_sum += particles[i].weight;
 	}	
 
+	// cout << "Weights sum =" << w_sum << endl;
+
+	// if(w_sum == 0.0){
+	// 	return;
+	// }
+
 	// Normalise our weights so that their sum cumulates to 1	
 	for(unsigned int i = 0; i < particles.size(); ++i){
 		Particle p = particles[i];
@@ -228,7 +237,7 @@ void ParticleFilter::resample() {
 		// particles[i] = p;
 
 		weights[i] = p.weight;
-		cout << "Weight update: " << weights[i] << endl;
+		// cout << "Weight update: " << weights[i] << endl;
 	}
 
 	
@@ -239,8 +248,10 @@ void ParticleFilter::resample() {
 	vector<Particle> survived_particles(particles.size());
 	for(unsigned int i = 0; i < survived_particles.size(); ++i){
 		int idx = dd(gen);
-		cout << "INDEX SURVIVOR: " << idx << endl;
-		survived_particles[i] = particles[idx];
+		// cout << "INDEX SURVIVOR: " << idx << endl;
+		Particle survivor = particles[idx];
+		survivor.id = i;
+		survived_particles[i] = survivor;
 	}
 
 	// Our sampled (or survived particles) now become our new particles

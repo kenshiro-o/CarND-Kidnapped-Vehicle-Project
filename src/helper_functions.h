@@ -72,8 +72,8 @@ struct LandmarkObs {
 	 * 
 	*/ 
 	LandmarkObs to_map_coordinates(double xp, double yp, double theta){		
-		double new_x = xp + cos(theta * x) - sin(theta * y);
-		double new_y = yp + sin(theta * x) + cos(theta * y);
+		double new_x = xp + (cos(theta) * x) - (sin(theta) * y);
+		double new_y = yp + (sin(theta) * x) + (cos(theta) * y);
 
 		LandmarkObs l = LandmarkObs();
 		l.id = id;
@@ -83,7 +83,6 @@ struct LandmarkObs {
 		return l;	
 	}
 
-
 	/**
 	 * Computes the distances between two landmark observations
 	 * @param obs the other landmark observation
@@ -92,34 +91,6 @@ struct LandmarkObs {
 		return dist(x, y, obs.x, obs.y);	
 	}
 };
-
-/**
- * Populates map coordinates landmark from the car coordinate landmark 
- * with respect to a point with orientation theta 
- * from a different perspective (but still in a cartesian system) 
- * by applying a homogenous transformation. Essentially a rotation and translation
- * are applied to find our new coordinates. 
- * @param car_coord_landmark in car coordinates
- * @param map_coord_landmark the landmark in map coordinates that will be populated
- * @param xp the x coordinate of our reference point
- * @param yp the y coordinate of our reference point
- * @param theta the rotation angle
- * 
-*/ 
-// inline void to_map_coordinates(const LandmarkObs &car_coord_landmark, 
-// 	LandmarkObs &map_coord_landmark, double xp, double yp, double theta){
-
-// 	double x = car_coord_landmark.x;
-// 	double y = car_coord_landmark.y;
-// 	double new_x = xp + cos(theta * x) - sin(theta * y);
-// 	double new_y = yp + sin(theta * x) + cos(theta * y);
-
-// 	map_coord_landmark.id = car_coord_landmark.id;
-// 	map_coord_landmark.x = new_x;
-// 	map_coord_landmark.y = new_y;
-
-// 	return;
-// }
 
 /**
  * Computes P(x,y). which represents the 2-argument version
